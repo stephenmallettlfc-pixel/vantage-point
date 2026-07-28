@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vantage Point — Business Diagnostic</title>
+<style>
+  :root{
+    --ink:#12181f; --paper:#eef1ee; --line:#c9cfc7;
+    --brass:#8a6d3b; --brass-bright:#b48c4a; --panel:#ffffff; --muted:#5a6459;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font-family:'Iowan Old Style','Palatino Linotype',Georgia,serif;min-height:100vh;}
+  .wrap{max-width:840px;margin:0 auto;padding:56px 24px 96px;}
+  header{border-bottom:2px solid var(--ink);padding-bottom:20px;margin-bottom:36px;}
+  .eyebrow{font-family:'Helvetica Neue',Arial,sans-serif;letter-spacing:.18em;text-transform:uppercase;
+    font-size:11px;color:var(--brass);font-weight:700;}
+  h1{font-size:2.4rem;margin:6px 0 8px;font-weight:400;letter-spacing:-0.01em;}
+  .sub{font-family:'Helvetica Neue',Arial,sans-serif;color:var(--muted);font-size:15px;max-width:560px;line-height:1.5;}
+  .panel{background:var(--panel);border:1px solid var(--line);padding:28px;margin-bottom:24px;}
+  .row{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;}
+  .field{flex:1 1 220px;display:flex;flex-direction:column;gap:6px;}
+  label{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--muted);}
+  input{font-family:'Helvetica Neue',Arial,sans-serif;font-size:15px;padding:11px 12px;
+    border:1px solid var(--line);background:#fbfbf9;color:var(--ink);}
+  input:focus{outline:2px solid var(--brass-bright);outline-offset:1px;}
+  button{font-family:'Helvetica Neue',Arial,sans-serif;background:var(--ink);color:#f4f4f1;border:none;
+    padding:13px 24px;font-size:14px;letter-spacing:.04em;cursor:pointer;margin-top:4px;}
+  button:disabled{opacity:.5;cursor:default;}
+  button:hover:not(:disabled){background:var(--brass);}
+  .status{font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;color:var(--muted);margin:14px 0 0;min-height:20px;}
+  .hidden{display:none;}
+  .section{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--brass);
+    padding:26px 28px;margin-bottom:20px;}
+  .section h2{font-family:'Helvetica Neue',Arial,sans-serif;font-size:12px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--brass);margin:0 0 14px;}
+  .section .body{font-size:16px;line-height:1.65;}
+  .section .body ul{padding-left:20px;margin:0;}
+  .section .body li{margin-bottom:8px;}
+  .section .body strong{color:var(--ink);}
+  .lockedNotice{font-family:'Helvetica Neue',Arial,sans-serif;font-size:14px;color:var(--muted);
+    border:1px dashed var(--line);padding:20px;text-align:center;margin-bottom:20px;}
+  .caveat{font-family:'Helvetica Neue',Arial,sans-serif;font-size:12.5px;color:var(--muted);
+    border-top:1px dashed var(--line);padding-top:16px;margin-top:8px;line-height:1.6;}
+  .error{font-family:'Helvetica Neue',Arial,sans-serif;background:#fbeceb;border:1px solid #d98f8a;
+    color:#7a2b26;padding:14px 18px;font-size:14px;margin-bottom:20px;display:none;}
+  .footer-note{font-family:'Helvetica Neue',Arial,sans-serif;font-size:12px;color:var(--muted);
+    text-align:center;margin-top:40px;}
+  .footer-note a{color:var(--brass);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Vantage Point</div>
+    <h1>What does your business look like from the outside?</h1>
+    <p class="sub">Enter a business and its website for a free, plain-language read on its market position, website presence, and how it shows up against competitors — plus prioritised next steps.</p>
+  </header>
+
+  <div class="panel">
+    <form id="form">
+      <div class="row">
+        <div class="field"><label for="name">Business name</label>
+          <input id="name" required placeholder="e.g. Harpenden Fine Foods"></div>
+        <div class="field"><label for="url">Website URL</label>
+          <input id="url" required placeholder="e.g. https://example.co.uk"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label for="context">Industry / location (optional)</label>
+          <input id="context" placeholder="e.g. independent grocer, Hertfordshire"></div>
+      </div>
+      <button type="submit" id="go">Run free diagnostic</button>
+      <div class="status" id="status"></div>
+    </form>
+  </div>
+
+  <div class="error" id="error"></div>
+
+  <div id="teaserWrap" class="hidden">
+    <div class="section"><h2>Market &amp; Industry Context</h2><div class="body" id="teaserBody"></div></div>
+
+    <div class="panel" id="unlockPanel">
+      <p class="sub" style="margin-bottom:16px;">That's a preview. Enter your details to unlock the full report — website audit, competitive landscape, and prioritised strengths, weaknesses &amp; actions.</p>
+      <form id="unlockForm">
+        <div class="row">
+          <div class="field"><label for="firstname">First name</label>
+            <input id="firstname" required placeholder="Jamie"></div>
+          <div class="field"><label for="email">Email</label>
+            <input id="email" type="email" required placeholder="you@business.co.uk"></div>
+        </div>
+        <button type="submit" id="unlockBtn">Unlock full report</button>
+        <div class="status" id="unlockStatus"></div>
+      </form>
+    </div>
+  </div>
+
+  <div id="fullReport" class="hidden">
+    <div class="section"><h2>Website &amp; Digital Presence</h2><div class="body" id="s_website"></div></div>
+    <div class="section"><h2>Competitive &amp; Search Landscape</h2><div class="body" id="s_competitive"></div></div>
+    <div class="section"><h2>Strengths, Weaknesses &amp; Priority Actions</h2><div class="body" id="s_synthesis"></div></div>
+    <p class="caveat">Built from public web signals only. This tool has no access to this business's actual Analytics, Search Console, or ad account data — treat it as an outside-in read, not a full audit.</p>
+  </div>
+
+  <p class="footer-note">By using this tool you agree to our handling of your details as set out in the <a href="/privacy.html">privacy notice</a>.</p>
+</div>
+
+<script>
+const form = document.getElementById('form');
+const unlockForm = document.getElementById('unlockForm');
+const statusEl = document.getElementById('status');
+const unlockStatusEl = document.getElementById('unlockStatus');
+const goBtn = document.getElementById('go');
+const unlockBtn = document.getElementById('unlockBtn');
+const errorEl = document.getElementById('error');
+const teaserWrap = document.getElementById('teaserWrap');
+const fullReport = document.getElementById('fullReport');
+
+let currentReportId = null;
+let currentBusinessName = '', currentBusinessUrl = '';
+
+function mdToHtml(md){
+  const lines = (md || '').split('\n').map(l=>l.trim()).filter(Boolean);
+  let html = '', inList = false;
+  for(const line of lines){
+    if(/^[-*]\s+/.test(line)){
+      if(!inList){ html += '<ul>'; inList = true; }
+      html += '<li>' + line.replace(/^[-*]\s+/,'').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>') + '</li>';
+    } else {
+      if(inList){ html += '</ul>'; inList = false; }
+      html += '<p>' + line.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>') + '</p>';
+    }
+  }
+  if(inList) html += '</ul>';
+  return html || '<p>No data returned for this section.</p>';
+}
+
+function showError(msg){
+  errorEl.textContent = msg;
+  errorEl.style.display = 'block';
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  errorEl.style.display = 'none';
+  teaserWrap.classList.add('hidden');
+  fullReport.classList.add('hidden');
+
+  currentBusinessName = document.getElementById('name').value.trim();
+  currentBusinessUrl = document.getElementById('url').value.trim();
+  const context = document.getElementById('context').value.trim();
+
+  goBtn.disabled = true;
+  statusEl.textContent = 'Running research — this takes up to a minute…';
+
+  try {
+    const res = await fetch('/api/diagnose', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: currentBusinessName, url: currentBusinessUrl, context }),
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'Something went wrong.');
+
+    currentReportId = data.reportId;
+    document.getElementById('teaserBody').innerHTML = mdToHtml(data.teaser.market);
+    teaserWrap.classList.remove('hidden');
+    statusEl.textContent = '';
+  } catch(err){
+    showError(err.message);
+    statusEl.textContent = '';
+  } finally {
+    goBtn.disabled = false;
+  }
+});
+
+unlockForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  errorEl.style.display = 'none';
+  unlockBtn.disabled = true;
+  unlockStatusEl.textContent = 'Unlocking…';
+
+  const firstname = document.getElementById('firstname').value.trim();
+  const email = document.getElementById('email').value.trim();
+
+  try {
+    const res = await fetch('/api/unlock', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ reportId: currentReportId, email, firstname }),
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'Something went wrong.');
+
+    document.getElementById('s_website').innerHTML = mdToHtml(data.report.website);
+    document.getElementById('s_competitive').innerHTML = mdToHtml(data.report.competitive);
+    document.getElementById('s_synthesis').innerHTML = mdToHtml(data.report.synthesis);
+    fullReport.classList.remove('hidden');
+    document.getElementById('unlockPanel').classList.add('hidden');
+    unlockStatusEl.textContent = '';
+  } catch(err){
+    showError(err.message);
+    unlockStatusEl.textContent = '';
+  } finally {
+    unlockBtn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
