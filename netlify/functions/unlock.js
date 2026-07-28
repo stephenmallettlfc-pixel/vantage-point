@@ -60,6 +60,21 @@ exports.handler = async (event) => {
     };
   }
 
+  if (report.status === "failed") {
+    return {
+      statusCode: 409,
+      body: JSON.stringify({ error: report.error || "This diagnostic failed to complete. Please run a new one." }),
+    };
+  }
+
+  if (report.status !== "ready") {
+    // Background research hasn't finished writing the full report yet.
+    return {
+      statusCode: 409,
+      body: JSON.stringify({ error: "This report is still being prepared. Please wait a moment and try again." }),
+    };
+  }
+
   try {
     await createHubSpotContact({
       email,

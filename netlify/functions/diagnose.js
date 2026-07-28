@@ -1,5 +1,4 @@
 const { blobStore } = require("./_blobs");
-const { askClaude } = require("./_claude");
 
 const MAX_REPORTS_PER_IP_PER_DAY = 5;
 
@@ -55,62 +54,29 @@ exports.handler = async (event) => {
   }
 
   try {
-    const marketPrompt = `You are a business analyst. Business: "${name}". Website: ${url}. Additional context: "${context || "none given"}".
-Use web search to establish: the industry/sector, who the target customers likely are, the apparent business model, and 2-3 relevant current market trends or pressures for a business like this.
-Respond ONLY in concise markdown bullet points (5-8 bullets), under 180 words total. No preamble, no headings, no closing remarks.`;
-
-    const websitePrompt = `You are a website auditor. Business: "${name}". Website: ${url}.
-Use web search (searching the domain, the business name + "reviews", the business name + "google business") to assess: whether the site appears to have a blog/content section, whether a Google Business Profile / reviews presence is visible, what the site's title/description looks like in search results, and any obvious content or trust-signal gaps (no address, no reviews, thin content, etc).
-Respond ONLY in concise markdown bullet points (5-8 bullets), under 180 words total. No preamble, no headings, no closing remarks.`;
-
-    const competitivePrompt = `You are a competitive analyst. Business: "${name}". Website: ${url}. Context: "${context || "none given"}".
-Use web search to find who the top 2-4 competitors are, and search for the core service/product this business likely offers to see whether "${name}" appears prominently in results or is overshadowed by competitors, directories, or marketplaces.
-Respond ONLY in concise markdown bullet points (5-8 bullets), under 180 words total. No preamble, no headings, no closing remarks.`;
-
-    const [market, website, competitive] = await Promise.all([
-      askClaude(marketPrompt),
-      askClaude(websitePrompt),
-      askClaude(competitivePrompt),
-    ]);
-
-    const synthPrompt = `You are a senior marketing consultant. Business: "${name}" (${url}).
-Here is research gathered about it:
-
-MARKET CONTEXT:
-${market}
-
-WEBSITE & DIGITAL PRESENCE:
-${website}
-
-COMPETITIVE & SEARCH LANDSCAPE:
-${competitive}
-
-Based only on the above, produce:
-1. Three genuine strengths (bold the label, one line each)
-2. Three genuine weaknesses (bold the label, one line each)
-3. Top three priority actions, ordered by impact, each one line, specific enough to act on
-
-Respond ONLY in concise markdown bullet points, under 220 words total.`;
-
-    const synthesis = await askClaude(synthPrompt, 700);
-
     const reportId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-    const fullReport = { name, url, context, market, website, competitive, synthesis, createdAt: new Date().toISOString() };
 
     const store = blobStore("reports");
     // Reports expire after 24h — this is a one-shot diagnostic tool, not a saved-history product (yet).
-    await store.setJSON(reportId, fullReport, { metadata: { name }, ttl: { seconds: 60 * 60 * 24 } });
+    // Write a placeholder immediately; the background function fills in the results.
+    await store.setJSON(
+      reportId,
+      { status: "pending", name, url, context, createdAt: new Date().toISOString() },
+      { metadata: { name }, ttl: { seconds: 60 * 60 * 24 } }
+    );
 
-    // Teaser: first section in full, plus a locked headline for the rest.
+    // Kick off the slow research work in a Netlify background function, which can run
+    // far longer than a normal function (avoiding this request timing out).
+    const base = process.env.URL;
+    await fetch(`${base}/.netlify/functions/run-diagnostic-background`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ reportId, name, url, context }),
+    });
+
     return {
-      statusCode: 200,
-      body: JSON.stringify({
-        reportId,
-        teaser: {
-          market,
-        },
-        locked: true,
-      }),
+      statusCode: 202,
+      body: JSON.stringify({ reportId, status: "pending" }),
     };
   } catch (err) {
     return { statusCode: 500, body: JSON.stringify({ error: err.message }) };

@@ -9,7 +9,9 @@ netlify.toml                     — routes /api/* to the functions
 public/index.html                — the site itself
 public/privacy.html              — starter UK GDPR privacy notice (edit before publishing)
 netlify/functions/_claude.js     — shared helper that calls the Anthropic API
-netlify/functions/diagnose.js    — runs the research, returns a teaser, stores full report (24h TTL)
+netlify/functions/diagnose.js    — validates + rate-limits, kicks off the background job, returns a reportId (24h TTL)
+netlify/functions/run-diagnostic-background.js — Netlify background function that does the slow research + synthesis
+netlify/functions/status.js      — fast polling endpoint: pending / ready (teaser) / failed
 netlify/functions/unlock.js      — captures the lead into HubSpot, releases the full report
 package.json                     — one dependency: @netlify/blobs (used for temp report storage + rate limiting)
 ```
@@ -42,9 +44,11 @@ After the first deploy, add the two environment variables above in the Netlify d
 ## What it does
 
 1. Visitor enters business name + URL + optional context.
-2. `/api/diagnose` runs three research passes (market, website, competitive) via Claude with web search, synthesises strengths/weaknesses/priorities, stores the full result in Netlify Blobs for 24 hours, and returns only the market-context section as a teaser.
-3. Visitor enters name + email to unlock.
-4. `/api/unlock` creates/updates a HubSpot contact (tagged with the business they looked up) and returns the full stored report.
+2. `/api/diagnose` validates the input, checks the rate limit, writes a `pending` record to Netlify Blobs, triggers the background function, and immediately returns a `reportId`. This keeps the request well under Netlify's function timeout.
+3. `run-diagnostic-background` (a Netlify background function, which can run far longer than a normal function) does the three research passes (market, website, competitive) via Claude with web search, synthesises strengths/weaknesses/priorities, and writes the full `ready` result back to the same Blobs record (24h TTL).
+4. The frontend polls `/api/status?reportId=…` every 3 seconds until the report is `ready` (then shows the market-context teaser) or `failed` (then shows an error).
+5. Visitor enters name + email to unlock.
+6. `/api/unlock` checks the report is `ready` (409 if still pending), creates/updates a HubSpot contact (tagged with the business they looked up), and returns the full stored report.
 
 ## Known limits, by design (see the production scoping doc)
 

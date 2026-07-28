@@ -141,6 +141,27 @@ function showError(msg){
   errorEl.style.display = 'block';
 }
 
+const POLL_INTERVAL_MS = 3000;
+
+function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+async function pollStatus(reportId){
+  // Poll until the background research finishes (or fails). The report itself
+  // expires server-side after 24h, so a 404 here means it's gone.
+  while(true){
+    const res = await fetch('/api/status?reportId=' + encodeURIComponent(reportId));
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'Something went wrong.');
+
+    if(data.status === 'ready') return data;
+    if(data.status === 'failed') throw new Error(data.error || 'The diagnostic failed to complete. Please try again.');
+
+    // Still pending — keep the user informed and wait before checking again.
+    statusEl.textContent = 'Still researching — this can take up to a minute…';
+    await sleep(POLL_INTERVAL_MS);
+  }
+}
+
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   errorEl.style.display = 'none';
@@ -152,7 +173,7 @@ form.addEventListener('submit', async (e) => {
   const context = document.getElementById('context').value.trim();
 
   goBtn.disabled = true;
-  statusEl.textContent = 'Running research — this takes up to a minute…';
+  statusEl.textContent = 'Starting research…';
 
   try {
     const res = await fetch('/api/diagnose', {
@@ -164,7 +185,11 @@ form.addEventListener('submit', async (e) => {
     if(!res.ok) throw new Error(data.error || 'Something went wrong.');
 
     currentReportId = data.reportId;
-    document.getElementById('teaserBody').innerHTML = mdToHtml(data.teaser.market);
+
+    // The diagnostic now runs as a background job — poll for the result.
+    const result = await pollStatus(currentReportId);
+
+    document.getElementById('teaserBody').innerHTML = mdToHtml(result.teaser.market);
     teaserWrap.classList.remove('hidden');
     statusEl.textContent = '';
   } catch(err){
