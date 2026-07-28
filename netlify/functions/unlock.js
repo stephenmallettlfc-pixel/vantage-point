@@ -1,4 +1,4 @@
-const { getStore } = require("@netlify/blobs");
+const { blobStore } = require("./_blobs");
 
 async function createHubSpotContact({ email, firstname, businessName, businessUrl }) {
   const token = process.env.HUBSPOT_ACCESS_TOKEN;
@@ -51,7 +51,7 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: JSON.stringify({ error: "reportId and email are required." }) };
   }
 
-  const store = getStore("reports");
+  const store = blobStore("reports");
   const report = await store.get(reportId, { type: "json" });
   if (!report) {
     return {
