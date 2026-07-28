@@ -1,4 +1,4 @@
-const { getStore } = require("@netlify/blobs");
+const { blobStore } = require("./_blobs");
 const { askClaude } = require("./_claude");
 
 const MAX_REPORTS_PER_IP_PER_DAY = 5;
@@ -8,7 +8,7 @@ function todayKey() {
 }
 
 async function checkAndIncrementRateLimit(ip) {
-  const store = getStore("rate-limits");
+  const store = blobStore("rate-limits");
   const key = `${ip}:${todayKey()}`;
   const current = (await store.get(key, { type: "json" })) || { count: 0 };
   if (current.count >= MAX_REPORTS_PER_IP_PER_DAY) {
@@ -97,7 +97,7 @@ Respond ONLY in concise markdown bullet points, under 220 words total.`;
     const reportId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     const fullReport = { name, url, context, market, website, competitive, synthesis, createdAt: new Date().toISOString() };
 
-    const store = getStore("reports");
+    const store = blobStore("reports");
     // Reports expire after 24h — this is a one-shot diagnostic tool, not a saved-history product (yet).
     await store.setJSON(reportId, fullReport, { metadata: { name }, ttl: { seconds: 60 * 60 * 24 } });
 
