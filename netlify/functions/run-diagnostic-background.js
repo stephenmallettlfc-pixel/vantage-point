@@ -1,5 +1,6 @@
 const { blobStore } = require("./_blobs");
 const { askClaude } = require("./_claude");
+const { getPageSpeed } = require("./_pagespeed");
 
 // Netlify "background function" — the trailing "-background" in the filename tells
 // Netlify to invoke this asynchronously (it responds 202 immediately and may run
@@ -31,18 +32,42 @@ exports.handler = async (event) => {
 Use web search to establish: the industry/sector, who the target customers likely are, the apparent business model, and 2-3 relevant current market trends or pressures for a business like this.
 Respond ONLY in concise markdown bullet points (5-8 bullets), under 180 words total. No preamble, no headings, no closing remarks.`;
 
-    const websitePrompt = `You are a website auditor. Business: "${name}". Website: ${url}.
-Use web search (searching the domain, the business name + "reviews", the business name + "google business") to assess: whether the site appears to have a blog/content section, whether a Google Business Profile / reviews presence is visible, what the site's title/description looks like in search results, and any obvious content or trust-signal gaps (no address, no reviews, thin content, etc).
-Respond ONLY in concise markdown bullet points (5-8 bullets), under 180 words total. No preamble, no headings, no closing remarks.`;
-
     const competitivePrompt = `You are a competitive analyst. Business: "${name}". Website: ${url}. Context: "${context || "none given"}".
 Use web search to find who the top 2-4 competitors are, and search for the core service/product this business likely offers to see whether "${name}" appears prominently in results or is overshadowed by competitors, directories, or marketplaces.
 Respond ONLY in concise markdown bullet points (5-8 bullets), under 180 words total. No preamble, no headings, no closing remarks.`;
 
+    // Kick off the real PageSpeed lookup plus the market & competitive research
+    // in parallel. The website audit prompt is grounded in the PageSpeed numbers,
+    // so we wait for that result before building it.
+    const pagespeedPromise = getPageSpeed(url);
+    const marketPromise = askClaude(marketPrompt);
+    const competitivePromise = askClaude(competitivePrompt);
+
+    const pagespeed = await pagespeedPromise;
+
+    let websitePrompt = `You are a website auditor. Business: "${name}". Website: ${url}.
+Use web search (searching the domain, the business name + "reviews", the business name + "google business") to assess: whether the site appears to have a blog/content section, whether a Google Business Profile / reviews presence is visible, what the site's title/description looks like in search results, and any obvious content or trust-signal gaps (no address, no reviews, thin content, etc).
+Respond ONLY in concise markdown bullet points (5-8 bullets), under 180 words total. No preamble, no headings, no closing remarks.`;
+
+    if (pagespeed) {
+      const facts = [];
+      if (pagespeed.performance != null) facts.push(`performance score ${pagespeed.performance}/100`);
+      if (pagespeed.seo != null) facts.push(`SEO score ${pagespeed.seo}/100`);
+      if (pagespeed.accessibility != null) facts.push(`accessibility score ${pagespeed.accessibility}/100`);
+      if (pagespeed.lcpSeconds != null) facts.push(`Largest Contentful Paint (LCP) ${pagespeed.lcpSeconds}s`);
+      if (pagespeed.cls != null) facts.push(`Cumulative Layout Shift (CLS) ${pagespeed.cls}`);
+
+      if (facts.length) {
+        websitePrompt += `
+
+Real PageSpeed data (Google Lighthouse, mobile) for this site: ${facts.join(", ")}. Use these actual figures rather than inferring performance/SEO health from search results, and call out any weak scores explicitly.`;
+      }
+    }
+
     const [market, website, competitive] = await Promise.all([
-      askClaude(marketPrompt),
+      marketPromise,
       askClaude(websitePrompt),
-      askClaude(competitivePrompt),
+      competitivePromise,
     ]);
 
     const synthPrompt = `You are a senior marketing consultant. Business: "${name}" (${url}).

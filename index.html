@@ -44,6 +44,11 @@
     border:1px dashed var(--line);padding:20px;text-align:center;margin-bottom:20px;}
   .caveat{font-family:'Helvetica Neue',Arial,sans-serif;font-size:12.5px;color:var(--muted);
     border-top:1px dashed var(--line);padding-top:16px;margin-top:8px;line-height:1.6;}
+  .waitlist{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--brass-bright);
+    padding:20px 28px;margin-bottom:20px;}
+  .waitlist .waitlistPrompt{font-family:'Helvetica Neue',Arial,sans-serif;font-size:14px;color:var(--ink);margin:0 0 12px;}
+  .waitlist .waitlistDone{font-family:'Helvetica Neue',Arial,sans-serif;font-size:14px;color:var(--brass);
+    margin:0;font-weight:700;}
   .error{font-family:'Helvetica Neue',Arial,sans-serif;background:#fbeceb;border:1px solid #d98f8a;
     color:#7a2b26;padding:14px 18px;font-size:14px;margin-bottom:20px;display:none;}
   .footer-note{font-family:'Helvetica Neue',Arial,sans-serif;font-size:12px;color:var(--muted);
@@ -99,6 +104,11 @@
   <div id="fullReport" class="hidden">
     <div class="section"><h2>Website &amp; Digital Presence</h2><div class="body" id="s_website"></div></div>
     <div class="section"><h2>Competitive &amp; Search Landscape</h2><div class="body" id="s_competitive"></div></div>
+    <div class="waitlist">
+      <p class="waitlistPrompt">Want the real numbers behind this — actual traffic and keyword data on your competitors?</p>
+      <button type="button" id="waitlistBtn">Join the waitlist</button>
+      <p class="waitlistDone hidden" id="waitlistDone">You're on the list — we'll be in touch when it's ready.</p>
+    </div>
     <div class="section"><h2>Strengths, Weaknesses &amp; Priority Actions</h2><div class="body" id="s_synthesis"></div></div>
     <p class="caveat">Built from public web signals only. This tool has no access to this business's actual Analytics, Search Console, or ad account data — treat it as an outside-in read, not a full audit.</p>
   </div>
@@ -119,6 +129,7 @@ const fullReport = document.getElementById('fullReport');
 
 let currentReportId = null;
 let currentBusinessName = '', currentBusinessUrl = '';
+let currentFirstname = '', currentEmail = '';
 
 function mdToHtml(md){
   const lines = (md || '').split('\n').map(l=>l.trim()).filter(Boolean);
@@ -208,6 +219,8 @@ unlockForm.addEventListener('submit', async (e) => {
 
   const firstname = document.getElementById('firstname').value.trim();
   const email = document.getElementById('email').value.trim();
+  currentFirstname = firstname;
+  currentEmail = email;
 
   try {
     const res = await fetch('/api/unlock', {
@@ -230,6 +243,29 @@ unlockForm.addEventListener('submit', async (e) => {
   } finally {
     unlockBtn.disabled = false;
   }
+});
+
+// Waitlist for the future paid competitor-data feature. Reuses the name/email
+// already captured at unlock — no extra form. Best-effort: always confirm.
+document.getElementById('waitlistBtn').addEventListener('click', async () => {
+  const waitlistBtn = document.getElementById('waitlistBtn');
+  waitlistBtn.disabled = true;
+  try {
+    await fetch('/api/waitlist', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        email: currentEmail,
+        name: currentFirstname,
+        businessName: currentBusinessName,
+        url: currentBusinessUrl,
+      }),
+    });
+  } catch(err) {
+    // Best-effort — never block the user; still show the confirmation.
+  }
+  waitlistBtn.classList.add('hidden');
+  document.getElementById('waitlistDone').classList.remove('hidden');
 });
 </script>
 </body>
