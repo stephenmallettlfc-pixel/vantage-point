@@ -100,6 +100,9 @@ Respond ONLY in concise markdown bullet points, under 220 words total.`;
       website,
       competitive,
       synthesis,
+      // Fixed, non-AI-generated CTA flag — a static CTA is more reliable and
+      // on-brand than one written fresh by the model each time.
+      isCta: true,
       createdAt: new Date().toISOString(),
     };
 

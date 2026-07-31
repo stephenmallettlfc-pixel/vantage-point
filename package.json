@@ -1,8 +1,8 @@
 {
-  "name": "vantage-point",
+  "name": "bizxray",
   "version": "1.0.0",
   "private": true,
-  "description": "Vantage Point — business diagnostic tool",
+  "description": "BIZXRAY — business diagnostic tool",
   "dependencies": {
     "@netlify/blobs": "^8.1.0"
   }

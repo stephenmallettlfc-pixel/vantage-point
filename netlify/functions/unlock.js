@@ -20,7 +20,7 @@ async function createHubSpotContact({ email, firstname, businessName, businessUr
         firstname: firstname || "",
         company: businessName || "",
         website: businessUrl || "",
-        lead_source: "Vantage Point diagnostic tool",
+        lead_source: "BIZXRAY diagnostic tool",
       },
     }),
   });

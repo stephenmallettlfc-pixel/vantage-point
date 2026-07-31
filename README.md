@@ -1,4 +1,4 @@
-# Vantage Point
+# BIZXRAY
 
 Business diagnostic tool — free preview + email-gated full report.
 
@@ -35,7 +35,7 @@ The site will run without `HUBSPOT_ACCESS_TOKEN` set (it just skips CRM sync and
 **Easiest path — Netlify CLI (recommended, works well from Claude Code if you want help with this step too):**
 ```
 npm install -g netlify-cli
-cd vantage-point
+cd bizxray
 netlify init      # links this folder to a new or existing Netlify site
 netlify deploy --prod
 ```
